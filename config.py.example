@@ -1,0 +1,3 @@
+INWX_USER = "yourname"
+INWX_PASS = "yourpass"
+INWX_OTP_SECRET = None
