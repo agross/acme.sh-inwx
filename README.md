@@ -8,6 +8,7 @@ This is a plugin to make the DNS-01 work with [inwx.de](inwx.de) and [acme.sh](h
     cd acme.sh-inwx.de.git
     cp config.py.example config.py
     vim config.py
+    chmod +x dns_inwx.sh acme-inwx.py
     ln -s "$(readlink -f dns_inwx.sh)" "PATH_TO_ACME_SH_DNSAPI_FOLDER/dns_inwx.sh"
 
 ## Usage
