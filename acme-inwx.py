@@ -9,7 +9,11 @@ parent_dir = os.path.abspath(os.path.dirname(__file__))
 vendor_dir = os.path.join(parent_dir, 'vendor')
 sys.path.append(vendor_dir)
 
-from config import INWX_USER, INWX_PASS, INWX_OTP_SECRET
+try:
+    from config import INWX_USER, INWX_PASS, INWX_OTP_SECRET
+except ImportError:
+    print("Make sure to create a configuration file first (check README.md).")
+    exit(1)
 from vendor.inwx import domrobot, getOTP
 from vendor.tldextract import TLDExtract
 
