@@ -1,119 +1,122 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+# coding=utf-8
 
-import pprint
-import re
+import argparse
+import os
 import sys
 
-from inwx import domrobot, prettyprint, getOTP
-from inwxcredentials import *
+parent_dir = os.path.abspath(os.path.dirname(__file__))
+vendor_dir = os.path.join(parent_dir, 'vendor')
+sys.path.append(vendor_dir)
 
-def main(inwxcredentials, args):
-    pp = pprint.PrettyPrinter(indent=4)
-    targetdomain = args[1]
-    challenge = args[2] if len(args)>2 else None
+from config import INWX_USER, INWX_PASS, INWX_OTP_SECRET
+from vendor.inwx import domrobot, getOTP
+from vendor.tldextract import TLDExtract
 
-    # Remove TXT name
-    if targetdomain.startswith('_acme-challenge.'):
-        targetdomain = targetdomain[16:]
 
-    print("Input:")
-    pp.pprint([ targetdomain, challenge ])
+class AcmeInwxException(Exception):
+    pass
 
-    # Create api connection and login
-    inwx_conn = domrobot(inwxcredentials["url"], False)
-    loginRet = inwx_conn.account.login({'lang': 'en', 'user': inwxcredentials["username"], 'pass': inwxcredentials["password"] })
 
-    # Perform OTP login if necessary
-    if 'tfa' in loginRet['resData'] and loginRet['resData']['tfa'] == 'GOOGLE-AUTH':
-        inwx_conn.account.unlock({'tan': getOTP(inwxcredentials["otpsecret"])})
+ACME_PREFIX = '_acme-challenge.'
 
-    print("Searching nameserver zone for "+targetdomain)
 
-    # Extract second level domain from given domain
-    sldmatch = re.search(ur"(^|\.)([^\.]+\.[^\.]+)$", targetdomain)
+class AcmeDomain(object):
+    def __init__(self, text):
+        if text.startswith(ACME_PREFIX):
+            text = text[len(ACME_PREFIX):]
 
-    if sldmatch is None:
-        print("Could not extract second level domain");
-        return False
+        no_cache_extract = TLDExtract(cache_file=False)
+        result = no_cache_extract(text)
 
-    # Build domain filter for api request
-    apisearchpattern = "*"+sldmatch.group(2)
-    print("API search pattern: "+apisearchpattern)
+        self.fqdn = result.fqdn
+        self.domain = result.registered_domain
+        self.subdomain = result.subdomain
 
-    # Fetch all domains from api
-    domains = inwx_conn.nameserver.list({ 'domain': apisearchpattern })
 
-    # Search domain in nameserver
-    matchdomain = None
-    matchsublevel = None
+class Inwx(object):
+    def __init__(self, domain, subdomain=None):
+        self.url = "https://api.domrobot.com/xmlrpc/"
+        self.inwx = domrobot(self.url)
+        self.domain = domain
+        self.subdomain = subdomain
 
-    for domain in domains['resData']['domains']:
-        sld = domain['domain']
-        try:
-            rgx = re.compile(ur"^(?P<sublevel>.+?)?(^|\.)"+re.escape(sld)+ur"$", re.UNICODE)
-            rgxmatch = rgx.search(targetdomain)
-            if rgxmatch:
-                matchdomain = sld
-                matchsublevel = rgxmatch.group('sublevel')
-                break
-        except UnicodeEncodeError:
-            print("TODO: Support unicode domains")
+        self.acme_record_name = '_acme-challenge{subdomain}'.format(
+            subdomain='.' + subdomain if subdomain is not None else '')
+        self.acme_record_type = 'TXT'
 
-    # Check match
-    if matchdomain is None:
-        print("Nameserver not found")
-        return False
+    def login(self, user, password, tfa):
+        res = self.inwx.account.login({'user': user, 'pass': password})
 
-    print("Nameserver match: "+matchdomain)
+        # Perform OTP login if enabled
+        if 'tfa' in res['resData'] and res['resData']['tfa'] == 'GOOGLE-AUTH':
+            self.inwx.account.unlock({'tan': getOTP(tfa)})
 
-    # Prepare
-    rname = "_acme-challenge"
-    rtype = "TXT"
-    rvalue = challenge
+    def has_acme_challange(self):
+        res = self.inwx.nameserver.info({
+            'domain': self.domain,
+            'name': self.acme_record_name,
+            'type': self.acme_record_type,
+        })
 
-    # Append sublevel part if exist
-    if matchsublevel is not None:
-        rname = rname+"."+matchsublevel
+        return 'record' in res['resData']
 
-    # Debug info
-    print("Debug:")
-    pp.pprint([ rname, rtype, rvalue ])
+    def get_record_id(self):
+        res = self.inwx.nameserver.info({
+            'domain': self.domain,
+            'type': self.acme_record_type,
+            'name': self.acme_record_name
+        })
 
-    # Check TXT record exist
-    existscheck = inwx_conn.nameserver.info({ 'domain': matchdomain, 'type': rtype, 'name': rname })
+        resData = res['resData']
+        if 'count' in resData and resData['count'] == 1:
+            return resData['record'][0]['id']
 
-    # Delete if exist
-    try:
-        record = existscheck["resData"]['record'][0]
-        print("TXT record exists -> delete")
-        pp.pprint(record)
-        result = inwx_conn.nameserver.deleteRecord({ 'id': record['id'] })
-        pp.pprint(result)
-    except KeyError:
-        pass
+        return None
 
-    # Create if challenge given
-    if rvalue is not None:
-        print("Create new TXT record")
-        result = inwx_conn.nameserver.createRecord({ 
-            'domain': matchdomain, 
-            'type': rtype, 
-            'name': rname,
-            'content': rvalue,
+    def add_acme_challenge(self, challenge):
+        acme_record_id = self.get_record_id()
+
+        if acme_record_id is not None:
+            print("Record already exists.")
+            return
+
+        self.inwx.nameserver.createRecord({
+            'domain': self.domain,
+            'type': self.acme_record_type,
+            'name': self.acme_record_name,
+            'content': challenge,
             'ttl': 300
         })
 
-        pp.pprint(result)
+    def remove_acme_challenge(self):
+        acme_record_id = self.get_record_id()
+        if id is not None:
+            self.inwx.nameserver.deleteRecord({
+                'id': acme_record_id,
+            })
+        else:
+            pass  # Had no acme challenge record in the first place
 
-    return True
 
-
-# Main
 if __name__ == '__main__':
-    if main(inwxcredentials, sys.argv) == True:
-        sys.exit(0)
+    parser = argparse.ArgumentParser(description='DNS-01 ACME implementation for INWX using acme.sh')
+    add_or_remove_group = parser.add_mutually_exclusive_group(required=True)
+    add_or_remove_group.add_argument('--add', action='store_true', help='Adds the ACME txt record.')
+    add_or_remove_group.add_argument('--remove', action='store_true', help='Removes the ACME txt record.')
+    parser.add_argument('--acme-record-name', help='The ACME txt record name.')
+    parser.add_argument('--challenge', default=None, help='The ACME challange code. Required if --add is specified.')
+    args = parser.parse_args()
+
+    if args.add and args.challenge is None:
+        parser.error('--add requires --challenge')
+
+    dom = AcmeDomain(args.acme_record_name)
+
+    inwx_client = Inwx(dom.domain, dom.subdomain)
+    inwx_client.login(INWX_USER, INWX_PASS, INWX_OTP_SECRET)
+
+    if args.add:
+        inwx_client.add_acme_challenge(args.challenge)
     else:
-        sys.exit(1)
-
-# EOF
-
+        inwx_client.remove_acme_challenge()
