@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-BASEDIR=$(dirname "$(readlink -f "$0")")
+BASEDIR="ABSOLUTE_PATH_TO_THIS_PROJECT_FOLDER"
 
 dns_inwx_add() {
     fulldomain=$1
