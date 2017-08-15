@@ -114,6 +114,7 @@ if __name__ == '__main__':
 
     if args.add and args.challenge is None:
         parser.error('--add requires --challenge')
+        exit(1)
 
     dom = AcmeDomain(args.acme_record_name)
 
