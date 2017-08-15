@@ -19,3 +19,6 @@ Then edit the acme.sh `dnsapi` folder in `dns_inwx.sh`.
 ## Note
 
 This is a rewrite of [Christians version](https://github.com/perryflynn/acme.sh-inwx).
+
+## License
+MIT
