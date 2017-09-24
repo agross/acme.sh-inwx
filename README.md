@@ -4,10 +4,13 @@ This is a plugin to make the DNS-01 work with [inwx.de](inwx.de) and [acme.sh](h
 
 ## Installation
 
-    git clone https://github.com/JonasGroeger/acme.sh-inwx.de.git
-    cd acme.sh-inwx.de.git
+    git clone https://github.com/JonasGroeger/acme.sh-inwx.de.git acme.sh-inwx.de
+    cd acme.sh-inwx.de
     cp config.py.example config.py
+    
+    # Enter your credentials
     vim config.py
+    
     chmod +x dns_inwx.sh acme-inwx.py
     ln -s "$(readlink -f dns_inwx.sh)" "PATH_TO_ACME_SH_DNSAPI_FOLDER/dns_inwx.sh"
 
