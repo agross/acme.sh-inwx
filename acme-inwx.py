@@ -66,7 +66,7 @@ class Inwx(object):
         return None
 
     def add_acme_challenge(self, challenge):
-        acme_record_id = self.get_record_id()
+        acme_record_id = self.get_record_id(challenge)
 
         if acme_record_id is not None:
             print("Record already exists.")
