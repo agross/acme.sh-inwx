@@ -60,11 +60,12 @@ class Inwx(object):
 
         return 'record' in res['resData']
 
-    def get_record_id(self):
+    def get_record_id(self, challenge):
         res = self.inwx.nameserver.info({
             'domain': self.domain,
             'type': self.acme_record_type,
-            'name': self.acme_record_name
+            'name': self.acme_record_name,
+            'content': challenge
         })
 
         resData = res['resData']
@@ -88,9 +89,9 @@ class Inwx(object):
             'ttl': 300
         })
 
-    def remove_acme_challenge(self):
-        acme_record_id = self.get_record_id()
-        if id is not None:
+    def remove_acme_challenge(self, challenge):
+        acme_record_id = self.get_record_id(challenge)
+        if acme_record_id is not None:
             self.inwx.nameserver.deleteRecord({
                 'id': acme_record_id,
             })
@@ -104,11 +105,15 @@ if __name__ == '__main__':
     add_or_remove_group.add_argument('--add', action='store_true', help='Adds the ACME txt record.')
     add_or_remove_group.add_argument('--remove', action='store_true', help='Removes the ACME txt record.')
     parser.add_argument('--acme-record-name', help='The ACME txt record name.')
-    parser.add_argument('--challenge', default=None, help='The ACME challange code. Required if --add is specified.')
+    parser.add_argument('--challenge', help='The ACME challenge code.')
     args = parser.parse_args()
 
     if args.add and args.challenge is None:
         parser.error('--add requires --challenge')
+        exit(1)
+
+    if args.remove and args.challenge is None:
+        parser.error('--remove requires --challenge')
         exit(1)
 
     dom = AcmeDomain(args.acme_record_name)
@@ -132,4 +137,4 @@ if __name__ == '__main__':
     if args.add:
         inwx_client.add_acme_challenge(args.challenge)
     else:
-        inwx_client.remove_acme_challenge()
+        inwx_client.remove_acme_challenge(args.challenge)
