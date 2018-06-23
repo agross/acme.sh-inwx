@@ -51,15 +51,6 @@ class Inwx(object):
         if 'tfa' in res['resData'] and res['resData']['tfa'] == 'GOOGLE-AUTH':
             self.inwx.account.unlock({'tan': getOTP(tfa)})
 
-    def has_acme_challange(self):
-        res = self.inwx.nameserver.info({
-            'domain': self.domain,
-            'name': self.acme_record_name,
-            'type': self.acme_record_type,
-        })
-
-        return 'record' in res['resData']
-
     def get_record_id(self, challenge):
         res = self.inwx.nameserver.info({
             'domain': self.domain,
