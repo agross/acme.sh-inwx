@@ -4,8 +4,8 @@ This is a plugin to make the DNS-01 work with [inwx.de](https://www.inwx.de) and
 
 ## Installation
 
-    git clone https://github.com/JonasGroeger/acme.sh-inwx.de.git acme.sh-inwx.de
-    cd acme.sh-inwx.de
+    git clone https://github.com/JonasGroeger/acme.sh-inwx.git acme.sh-inwx
+    cd acme.sh-inwx
     cp config/config.py.example config/_.py
 
     # Enter your credentials
