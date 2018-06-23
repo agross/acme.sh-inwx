@@ -9,11 +9,6 @@ parent_dir = os.path.abspath(os.path.dirname(__file__))
 vendor_dir = os.path.join(parent_dir, 'vendor')
 sys.path.append(vendor_dir)
 
-try:
-    from config import INWX_USER, INWX_PASS, INWX_OTP_SECRET
-except ImportError:
-    print("Make sure to create a configuration file first (check README.md).")
-    exit(1)
 from vendor.inwx import domrobot, getOTP
 from vendor.tldextract import TLDExtract
 
@@ -117,6 +112,19 @@ if __name__ == '__main__':
         exit(1)
 
     dom = AcmeDomain(args.acme_record_name)
+
+    try:
+        try:
+            print('Trying configuration for %s' % dom.domain)
+            exec 'from config.%s import INWX_USER, INWX_PASS, INWX_OTP_SECRET' % dom.domain.replace('.', '_')
+            print('Found configuration for %s' % dom.domain)
+        except ImportError:
+            print('Trying default configuration')
+            from config._ import INWX_USER, INWX_PASS, INWX_OTP_SECRET
+            print('Found default configuration')
+    except ImportError:
+        print("Make sure to create a configuration file first (check README.md).")
+        exit(1)
 
     inwx_client = Inwx(dom.domain, dom.subdomain)
     inwx_client.login(INWX_USER, INWX_PASS, INWX_OTP_SECRET)
