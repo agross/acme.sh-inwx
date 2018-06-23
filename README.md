@@ -1,6 +1,6 @@
 # acme.sh-inwx
 
-This is a plugin to make the DNS-01 work with [inwx.de](inwx.de) and [acme.sh](https://github.com/Neilpang/acme.sh).
+This is a plugin to make the DNS-01 work with [inwx.de](https://www.inwx.de) and [acme.sh](https://github.com/Neilpang/acme.sh).
 
 ## Installation
 
